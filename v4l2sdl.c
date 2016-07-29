@@ -266,7 +266,7 @@ void callback_func(void *frame, void *user_ptr)
 	char buffer[width * height * bytes_per_pixel * 2];
 	//printf("frame %dx%d: %p\n", width, height, frame);
 	SDL_Rect sourceRect = {0, 0, width * 2, height};
-	SDL_Rect destRect = {0, 0, width * 2, height};
+	SDL_Rect destRect = {0, 0, width * 4, height * 2};
 	graytoycbcr(frame, buffer, width * 2, height);
 	SDL_UpdateTexture(texture, &sourceRect, buffer, width * 2 * bytes_per_pixel);
 	SDL_RenderCopy(renderer, texture, &sourceRect, &destRect);

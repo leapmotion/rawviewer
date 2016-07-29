@@ -13,7 +13,7 @@ EXE = RawViewer
 all: $(EXE)
 
 $(EXE): v4l2sdl.o
-	$(CC) $< $(LDFLAGS) -o $@
+	$(CC) $< $(LDFLAGS) -g -o $@
 
 clean:
 	rm *.o && rm $(EXE)
