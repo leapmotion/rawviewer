@@ -248,7 +248,7 @@ int v4l2_streamoff(int fd)
 	return 0;
 }
 
-void graytoycbcr(char* src, char* dst, int width, int height)
+void graytoycbcr(unsigned char* src, unsigned char* dst, int width, int height)
 {
 	int i;
 	for (i = 0; i < width * height; i += 2) {
