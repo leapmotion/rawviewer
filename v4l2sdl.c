@@ -127,7 +127,7 @@ int v4l2_mmap(int fd, void *buffers[], int *buf_length)
 			printf("VIDIOC_QUERYBUF failure\n");
 			continue;
 		}
-		//printf("VIDIOC_QUERYBUF buf length:%d\n", buf.length);
+		printf("VIDIOC_QUERYBUF buf length:%d\n", buf.length);
 		*buf_length = buf.length;
 		buffers[idx] = mmap(NULL, buf.length,
 			PROT_READ | PROT_WRITE,
@@ -159,13 +159,15 @@ static void *stream_func(void *cb_handle)
 	struct timeval tv;
 	struct v4l2_buffer buf;
 	struct cb_handle *handle = (struct cb_handle *)cb_handle;
+	struct timeval last_tv;
+	struct timeval now_tv;
 	printf("stream is on\n");
 
 	if (SDL_Init(SDL_INIT_VIDEO) != 0){
 		printf("SDL_Init Error\n");
 		return NULL;
 	}
-	window = SDL_CreateWindow("sdl_viewer", 100, 100, width * 2, height, SDL_WINDOW_SHOWN);
+	window = SDL_CreateWindow("sdl_viewer", 100, 100, width, height, SDL_WINDOW_SHOWN);
 	if (window == NULL) {
 		printf("SDL_CreateWindow Error\n");
 		return NULL;
@@ -175,7 +177,7 @@ static void *stream_func(void *cb_handle)
 		printf("SDL_CreateRenderer Error\n");
 		return NULL;
 	}
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_YUY2, SDL_TEXTUREACCESS_STREAMING, width * 2, height);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_YUY2, SDL_TEXTUREACCESS_STREAMING, width, height);
 
 	while (!recv_sig) {
 		int ret;
@@ -197,6 +199,10 @@ static void *stream_func(void *cb_handle)
 				printf("VIDIOC_DQBUF failure\n");
 				return NULL;
 			}
+			gettimeofday(&now_tv, NULL);
+			//printf("%ld usec\n", (now_tv.tv_sec - last_tv.tv_sec) * 1000000 + (now_tv.tv_usec - last_tv.tv_usec));
+			last_tv.tv_sec = now_tv.tv_sec;
+			last_tv.tv_usec = now_tv.tv_usec;
 			if (handle->call_back)
 				(*handle->call_back)(video_buffers[buf.index], NULL);
 			if (-1 == ioctl(handle->fd, VIDIOC_QBUF, &buf))
@@ -261,14 +267,28 @@ void graytoycbcr(unsigned char* src, unsigned char* dst, int width, int height)
 	}
 }
 
+void graytoycbcr2(unsigned char* src, unsigned char* dst, int width, int height)
+{
+	int i;
+	for (i = width * height - 1; i > 0; i -= 2) {
+		float gray = src[i];
+		*dst++ = (char)(0.299*gray + 0.587*gray + 0.114*gray);
+		*dst++ = (char)(128.0 - 0.168636*gray - 0.331264*gray + 0.5*gray);
+		gray = src[i - 1];
+		*dst++ = (char)(0.299*gray + 0.587*gray + 0.114*gray);
+		*dst++ = (char)(128.0 + 0.5*gray - 0.418688*gray - 0.081312*gray);
+	}
+}
+
 void callback_func(void *frame, void *user_ptr)
 {
 	char buffer[width * height * bytes_per_pixel * 2];
 	//printf("frame %dx%d: %p\n", width, height, frame);
-	SDL_Rect sourceRect = {0, 0, width * 2, height};
-	SDL_Rect destRect = {0, 0, width * 4, height * 2};
-	graytoycbcr(frame, buffer, width * 2, height);
-	SDL_UpdateTexture(texture, &sourceRect, buffer, width * 2 * bytes_per_pixel);
+	SDL_Rect sourceRect = {0, 0, width, height};
+	SDL_Rect destRect = {0, 0, width, height};
+	graytoycbcr(frame, buffer, width, height);
+	//graytoycbcr2(frame, buffer, width, height);
+	SDL_UpdateTexture(texture, &sourceRect, buffer, width * bytes_per_pixel);
 	SDL_RenderCopy(renderer, texture, &sourceRect, &destRect);
 	SDL_RenderPresent(renderer);
 }
@@ -308,7 +328,7 @@ int main(int argc, char **argv)
 	 	printf("V4L2_CAP_STREAMING not supported\n");
 		goto main_exit;
 	}
-	errno = v4l2_sfmt(video_fd, width, height, pixel_format);
+	errno = v4l2_sfmt(video_fd, width / 2, height, pixel_format);
 	if (errno) {
 		printf("VIDIOC_S_FMT failure\n");
 		goto main_exit;
