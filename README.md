@@ -1,8 +1,8 @@
 # rawviewer
-RawViewer for Leap Motion Controllers
+LeapViewer for Leap Motion Controllers
 
 Usage:
-	RawViewer width height (/dev/video#)
+	LeapViewer (width) (height) (is_interleaved(0/1)) (/dev/video#)
 
 SDL2 is required.
 
