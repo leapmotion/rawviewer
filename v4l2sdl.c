@@ -96,7 +96,7 @@ int v4l2_sfmt(int fd, int width, int height, uint32_t pfmt)
 	fmt.fmt.pix.field = V4L2_FIELD_INTERLACED;
 	ret = ioctl(fd, VIDIOC_S_FMT, &fmt);
 	printf("VIDIOC_S_FMT ret:%d type:%x width:%d\
-		height:%d fmt:%x bytesperline:%d sizeimage:%d\n",
+		height:%d fmt:0x%x bytesperline:%d sizeimage:%d\n",
 		ret, fmt.type,
 		fmt.fmt.pix.width, fmt.fmt.pix.height,
 		fmt.fmt.pix.pixelformat,
@@ -343,7 +343,7 @@ int main(int argc, char **argv)
 		printf("VIDIOC_S_FMT failure\n");
 		goto main_exit;
 	}
-	printf("VIDIOC_S_FMT success\n");
+	//printf("VIDIOC_S_FMT success\n");
 	errno = v4l2_mmap(video_fd, video_buffers, &video_buf_len);
 	if (errno) {
 		printf("v4l2 mmap failure\n");
