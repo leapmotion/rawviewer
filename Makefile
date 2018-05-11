@@ -8,7 +8,7 @@ SDL_INCLUDE = -I/usr/local/include
 
 LDFLAGS = $(SDL_LIB) -lpthread
 
-EXE = RawViewer
+EXE = LeapViewer
 
 all: $(EXE)
 

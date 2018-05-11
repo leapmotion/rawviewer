@@ -22,11 +22,11 @@ char *video_dev;
 int video_buf_len;
 void *video_buffers[BUF_NUM];
 int recv_sig;
-int width = 640, height = 480;
+int width = 1280, height = 240;
 const int bytes_per_pixel = 2;
 uint32_t pixel_format = V4L2_PIX_FMT_YUYV;
 //int pixel_format = V4L2_PIX_FMT_RGB565;
-int is_rigel = 0;
+int is_interleaved = 1;
 
 pthread_t stream_thread;
 typedef void(frame_cb)(void *frame, void *user_ptr);
@@ -117,7 +117,7 @@ int v4l2_mmap(int fd, void *buffers[], int *buf_length)
 		printf("VIDIOC_REQBUFS failure\n");
 		return -1;
 	}
-	printf("VIDIOC_REQBUFS success\n");
+	//printf("VIDIOC_REQBUFS success\n");
 	for (idx = 0; idx < req.count; idx++) {
 		struct v4l2_buffer buf;
 		memset(&buf, 0, sizeof(buf));
@@ -128,7 +128,7 @@ int v4l2_mmap(int fd, void *buffers[], int *buf_length)
 			printf("VIDIOC_QUERYBUF failure\n");
 			continue;
 		}
-		printf("VIDIOC_QUERYBUF buf length:%d\n", buf.length);
+		//printf("VIDIOC_QUERYBUF buf length:%d\n", buf.length);
 		*buf_length = buf.length;
 		buffers[idx] = mmap(NULL, buf.length,
 			PROT_READ | PROT_WRITE,
@@ -162,7 +162,7 @@ static void *stream_func(void *cb_handle)
 	struct cb_handle *handle = (struct cb_handle *)cb_handle;
 	struct timeval last_tv;
 	struct timeval now_tv;
-	printf("stream is on\n");
+	printf("streaming\n");
 
 	if (SDL_Init(SDL_INIT_VIDEO) != 0){
 		printf("SDL_Init Error\n");
@@ -268,7 +268,6 @@ void graytoycbcr(unsigned char* src, unsigned char* dst, int width, int height)
 	}
 }
 
-#define CSIZE 2
 void graytoycbcr2(unsigned char* src, unsigned char* dst, int width, int height)
 {
 	unsigned char* left;
@@ -294,10 +293,10 @@ void callback_func(void *frame, void *user_ptr)
 	//printf("frame %dx%d: %p\n", width, height, frame);
 	SDL_Rect sourceRect = {0, 0, width, height};
 	SDL_Rect destRect = {0, 0, width, height};
-	if (is_rigel)
-		graytoycbcr(frame, buffer, width, height);
-	else
+	if (is_interleaved)
 		graytoycbcr2(frame, buffer, width, height);
+	else
+		graytoycbcr(frame, buffer, width, height);
 	SDL_UpdateTexture(texture, &sourceRect, buffer, width * bytes_per_pixel);
 	SDL_RenderCopy(renderer, texture, &sourceRect, &destRect);
 	SDL_RenderPresent(renderer);
@@ -310,24 +309,19 @@ int main(int argc, char **argv)
 	struct v4l2_capability cap;
 	struct cb_handle handle;
 
-	if (argc < 3) {
-		printf("Usage: v4l2dsl width height peri/rigel (/dev/video#)\n");
+	if (argc > 1 && !strcmp(argv[1], "-h")) {
+		printf("Usage: v4l2dsl width height isInterleaved(0/1) (/dev/video#)\n");
 		return -1;
 	}
 	video_dev = "/dev/video0";
 	if (argc > 2) {
-		width = atoi(argv[1]);
+		width = atoi(argv[1]) * 2;
 		height = atoi(argv[2]);
 	}
-	if (argc > 3) {
-		if (!strcmp(argv[3], "rigel"))
-			is_rigel = 1;
-		else
-			is_rigel = 0;
-	}
-	if (argc > 4) {
+	if (argc > 3)
+		is_interleaved = atoi(argv[3]);
+	if (argc > 4)
 		video_dev = argv[4];
-	}
 
 	video_fd = v4l2_open(video_dev);
 	if (video_fd == -1) {
