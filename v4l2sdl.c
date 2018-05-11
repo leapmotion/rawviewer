@@ -26,6 +26,7 @@ int width = 640, height = 480;
 const int bytes_per_pixel = 2;
 uint32_t pixel_format = V4L2_PIX_FMT_YUYV;
 //int pixel_format = V4L2_PIX_FMT_RGB565;
+int is_rigel = 0;
 
 pthread_t stream_thread;
 typedef void(frame_cb)(void *frame, void *user_ptr);
@@ -267,16 +268,23 @@ void graytoycbcr(unsigned char* src, unsigned char* dst, int width, int height)
 	}
 }
 
+#define CSIZE 2
 void graytoycbcr2(unsigned char* src, unsigned char* dst, int width, int height)
 {
-	int i;
-	for (i = width * height - 1; i > 0; i -= 2) {
-		float gray = src[i];
-		*dst++ = (char)(0.299*gray + 0.587*gray + 0.114*gray);
-		*dst++ = (char)(128.0 - 0.168636*gray - 0.331264*gray + 0.5*gray);
-		gray = src[i - 1];
-		*dst++ = (char)(0.299*gray + 0.587*gray + 0.114*gray);
-		*dst++ = (char)(128.0 + 0.5*gray - 0.418688*gray - 0.081312*gray);
+	unsigned char* left;
+	unsigned char* right;
+	int j, i;
+	for (j = 0; j < height; j++) {
+		left = dst + width * j * 2;
+		right = dst + width * j * 2 + width;
+		for (i = 0; i < width; i += 2) {
+			float gray = src[j * width + i];
+			*left++ = (char)(0.299*gray + 0.587*gray + 0.114*gray);
+			*left++ = (char)(128.0 - 0.168636*gray - 0.331264*gray + 0.5*gray);
+			gray = src[j * width + i + 1];
+			*right++ = (char)(0.299*gray + 0.587*gray + 0.114*gray);
+			*right++ = (char)(128.0 + 0.5*gray - 0.418688*gray - 0.081312*gray);
+		}
 	}
 }
 
@@ -286,8 +294,10 @@ void callback_func(void *frame, void *user_ptr)
 	//printf("frame %dx%d: %p\n", width, height, frame);
 	SDL_Rect sourceRect = {0, 0, width, height};
 	SDL_Rect destRect = {0, 0, width, height};
-	graytoycbcr(frame, buffer, width, height);
-	//graytoycbcr2(frame, buffer, width, height);
+	if (is_rigel)
+		graytoycbcr(frame, buffer, width, height);
+	else
+		graytoycbcr2(frame, buffer, width, height);
 	SDL_UpdateTexture(texture, &sourceRect, buffer, width * bytes_per_pixel);
 	SDL_RenderCopy(renderer, texture, &sourceRect, &destRect);
 	SDL_RenderPresent(renderer);
@@ -300,8 +310,8 @@ int main(int argc, char **argv)
 	struct v4l2_capability cap;
 	struct cb_handle handle;
 
-	if (argc < 2) {
-		printf("Usage: v4l2dsl width height (/dev/video#)\n");
+	if (argc < 3) {
+		printf("Usage: v4l2dsl width height peri/rigel (/dev/video#)\n");
 		return -1;
 	}
 	video_dev = "/dev/video0";
@@ -310,7 +320,13 @@ int main(int argc, char **argv)
 		height = atoi(argv[2]);
 	}
 	if (argc > 3) {
-		video_dev = argv[3];
+		if (!strcmp(argv[3], "rigel"))
+			is_rigel = 1;
+		else
+			is_rigel = 0;
+	}
+	if (argc > 4) {
+		video_dev = argv[4];
 	}
 
 	video_fd = v4l2_open(video_dev);
