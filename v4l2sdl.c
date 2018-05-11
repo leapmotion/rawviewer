@@ -1,19 +1,20 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <linux/videodev2.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <pthread.h>
 #include <errno.h>
-#include <stdint.h>
-#include <SDL2/SDL.h>
+#include <fcntl.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
+#include <linux/videodev2.h>
+#include <pthread.h>
+#include <SDL2/SDL.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 #define BUF_NUM 10
 #define SIG_KILL 0x1000
